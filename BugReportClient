@@ -1,0 +1,439 @@
+-- ═══════════════════════════════════════════════════════════
+--  PROFESSIONAL BUG REPORTING SYSTEM - ULTRA COMPACT
+--  Minimal Screen Obstruction - Center Top Position
+--  
+--  Author: ItoRenz00
+--  Version: 1.0.0
+--  Last Updated: 2025
+-- ═══════════════════════════════════════════════════════════
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ════════════════ REMOTE EVENT SETUP ════════════════
+local sendBugReport = ReplicatedStorage:FindFirstChild("SendBugReport")
+if not sendBugReport then
+    sendBugReport = Instance.new("RemoteEvent")
+    sendBugReport.Name = "SendBugReport"
+    sendBugReport.Parent = ReplicatedStorage
+end
+
+-- ════════════════ DEVICE DETECTION ════════════════
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+-- ════════════════ ULTRA COMPACT SCALING ════════════════
+local SCALE = {
+    -- Mobile (Ultra Compact)
+    MOBILE = {
+        BUTTON_SIZE = UDim2.new(0, 25, 0, 25),
+        BUTTON_POS = UDim2.new(0.5, 70, 0, 12),
+        PANEL_SIZE = UDim2.new(0, 240, 0, 260),
+        PANEL_TOP = 45,
+        HEADER_HEIGHT = 38,
+        TEXTBOX_HEIGHT = 100,
+        TITLE_SIZE = 13,
+        LABEL_SIZE = 10,
+        TEXT_SIZE = 10,
+        BUTTON_HEIGHT = 32,
+        PADDING = 10
+    },
+    -- PC (Very Compact)
+    PC = {
+        BUTTON_SIZE = UDim2.new(0, 30, 0, 30),
+        BUTTON_POS = UDim2.new(0.5, -100, 0, 12),
+        PANEL_SIZE = UDim2.new(0, 320, 0, 340),
+        PANEL_TOP = 50,
+        HEADER_HEIGHT = 42,
+        TEXTBOX_HEIGHT = 130,
+        TITLE_SIZE = 14,
+        LABEL_SIZE = 11,
+        TEXT_SIZE = 11,
+        BUTTON_HEIGHT = 36,
+        PADDING = 14
+    }
+}
+
+local scale = isMobile and SCALE.MOBILE or SCALE.PC
+
+-- ════════════════ COLOR PALETTE ════════════════
+local COLORS = {
+    PRIMARY = Color3.fromRGB(138, 43, 226),
+    PRIMARY_HOVER = Color3.fromRGB(155, 70, 235),
+    SECONDARY = Color3.fromRGB(255, 69, 58),
+    CARD = Color3.fromRGB(35, 35, 40),
+    TEXT_PRIMARY = Color3.fromRGB(255, 255, 255),
+    TEXT_SECONDARY = Color3.fromRGB(175, 175, 185),
+    TEXT_MUTED = Color3.fromRGB(125, 125, 135),
+    SUCCESS = Color3.fromRGB(48, 209, 88),
+    WARNING = Color3.fromRGB(255, 159, 10),
+    BORDER = Color3.fromRGB(55, 55, 60)
+}
+
+-- ════════════════ GUI SETUP ════════════════
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ProBugReportSystem"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = playerGui
+
+-- ════════════════ ULTRA COMPACT BUTTON (CENTER TOP) ════════════════
+local openButton = Instance.new("TextButton")
+openButton.Name = "TriggerButton"
+openButton.Size = scale.BUTTON_SIZE
+openButton.Position = scale.BUTTON_POS
+openButton.AnchorPoint = Vector2.new(0.5, 0)
+openButton.BackgroundColor3 = COLORS.PRIMARY
+openButton.Text = ""
+openButton.AutoButtonColor = false
+openButton.BorderSizePixel = 0
+openButton.BackgroundTransparency = 0
+openButton.Parent = screenGui
+
+local buttonIcon = Instance.new("TextLabel")
+buttonIcon.Size = UDim2.new(1, 0, 1, 0)
+buttonIcon.BackgroundTransparency = 1
+buttonIcon.Text = "⚠"
+buttonIcon.TextSize = isMobile and 14 or 16
+buttonIcon.Font = Enum.Font.GothamBold
+buttonIcon.TextColor3 = COLORS.TEXT_PRIMARY
+buttonIcon.Parent = openButton
+
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 8)
+buttonCorner.Parent = openButton
+
+-- ════════════════ ULTRA COMPACT PANEL ════════════════
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "ReportPanel"
+mainFrame.Size = scale.PANEL_SIZE
+mainFrame.Position = UDim2.new(0.5, 0, 0, -500)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.BackgroundTransparency = 0
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
+
+local borderStroke = Instance.new("UIStroke")
+borderStroke.Color = COLORS.BORDER
+borderStroke.Thickness = 1
+borderStroke.Transparency = 0.4
+borderStroke.Parent = mainFrame
+
+-- ════════════════ COMPACT HEADER ════════════════
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, scale.HEADER_HEIGHT)
+header.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
+header.BorderSizePixel = 0
+header.BackgroundTransparency = 0
+header.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 12)
+headerCorner.Parent = header
+
+local headerCover = Instance.new("Frame")
+headerCover.Size = UDim2.new(1, 0, 0, 12)
+headerCover.Position = UDim2.new(0, 0, 1, -12)
+headerCover.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
+headerCover.BorderSizePixel = 0
+headerCover.BackgroundTransparency = 0
+headerCover.Parent = header
+
+local accentLine = Instance.new("Frame")
+accentLine.Size = UDim2.new(1, 0, 0, 2)
+accentLine.Position = UDim2.new(0, 0, 1, 0)
+accentLine.BackgroundColor3 = COLORS.PRIMARY
+accentLine.BorderSizePixel = 0
+accentLine.BackgroundTransparency = 0
+accentLine.Parent = header
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -60, 1, 0)
+title.Position = UDim2.new(0, scale.PADDING, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "⚡ REPORT ISSUE"
+title.TextSize = scale.TITLE_SIZE
+title.Font = Enum.Font.GothamBold
+title.TextColor3 = COLORS.TEXT_PRIMARY
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 28, 0, 28)
+closeButton.Position = UDim2.new(1, -scale.PADDING - 28, 0.5, -14)
+closeButton.BackgroundColor3 = COLORS.CARD
+closeButton.Text = ""
+closeButton.AutoButtonColor = false
+closeButton.BorderSizePixel = 0
+closeButton.BackgroundTransparency = 0
+closeButton.Parent = header
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 7)
+closeCorner.Parent = closeButton
+
+local closeIcon = Instance.new("TextLabel")
+closeIcon.Size = UDim2.new(1, 0, 1, 0)
+closeIcon.BackgroundTransparency = 1
+closeIcon.Text = "X"
+closeIcon.TextSize = 14
+closeIcon.Font = Enum.Font.GothamBold
+closeIcon.TextColor3 = COLORS.TEXT_SECONDARY
+closeIcon.Parent = closeButton
+
+-- ════════════════ COMPACT CONTENT ════════════════
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "Content"
+contentFrame.Size = UDim2.new(1, -scale.PADDING * 2, 1, -scale.HEADER_HEIGHT - scale.PADDING * 2)
+contentFrame.Position = UDim2.new(0, scale.PADDING, 0, scale.HEADER_HEIGHT + scale.PADDING)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+
+local instructionsLabel = Instance.new("TextLabel")
+instructionsLabel.Size = UDim2.new(1, 0, 0, 18)
+instructionsLabel.BackgroundTransparency = 1
+instructionsLabel.Text = "Describe the issue"
+instructionsLabel.TextSize = scale.LABEL_SIZE
+instructionsLabel.Font = Enum.Font.GothamMedium
+instructionsLabel.TextColor3 = COLORS.TEXT_SECONDARY
+instructionsLabel.TextXAlignment = Enum.TextXAlignment.Left
+instructionsLabel.Parent = contentFrame
+
+local textBoxCard = Instance.new("Frame")
+textBoxCard.Size = UDim2.new(1, 0, 0, scale.TEXTBOX_HEIGHT)
+textBoxCard.Position = UDim2.new(0, 0, 0, 22)
+textBoxCard.BackgroundColor3 = COLORS.CARD
+textBoxCard.BorderSizePixel = 0
+textBoxCard.BackgroundTransparency = 0
+textBoxCard.Parent = contentFrame
+
+local cardCorner = Instance.new("UICorner")
+cardCorner.CornerRadius = UDim.new(0, 8)
+cardCorner.Parent = textBoxCard
+
+local cardStroke = Instance.new("UIStroke")
+cardStroke.Color = COLORS.BORDER
+cardStroke.Thickness = 1
+cardStroke.Transparency = 0.5
+cardStroke.Parent = textBoxCard
+
+local textBox = Instance.new("TextBox")
+textBox.Size = UDim2.new(1, -14, 1, -14)
+textBox.Position = UDim2.new(0, 7, 0, 7)
+textBox.BackgroundTransparency = 1
+textBox.Text = ""
+textBox.PlaceholderText = "When I press jump, character freezes..."
+textBox.TextSize = scale.TEXT_SIZE
+textBox.Font = Enum.Font.Gotham
+textBox.TextColor3 = COLORS.TEXT_PRIMARY
+textBox.PlaceholderColor3 = COLORS.TEXT_MUTED
+textBox.TextXAlignment = Enum.TextXAlignment.Left
+textBox.TextYAlignment = Enum.TextYAlignment.Top
+textBox.MultiLine = true
+textBox.ClearTextOnFocus = false
+textBox.TextWrapped = true
+textBox.Parent = textBoxCard
+
+local counterContainer = Instance.new("Frame")
+counterContainer.Size = UDim2.new(1, 0, 0, 18)
+counterContainer.Position = UDim2.new(0, 0, 0, scale.TEXTBOX_HEIGHT + 26)
+counterContainer.BackgroundTransparency = 1
+counterContainer.Parent = contentFrame
+
+local charCounter = Instance.new("TextLabel")
+charCounter.Size = UDim2.new(0.5, 0, 1, 0)
+charCounter.Position = UDim2.new(1, 0, 0, 0)
+charCounter.AnchorPoint = Vector2.new(1, 0)
+charCounter.BackgroundTransparency = 1
+charCounter.Text = "0 / 750"
+charCounter.TextSize = scale.LABEL_SIZE - 1
+charCounter.Font = Enum.Font.GothamMedium
+charCounter.TextColor3 = COLORS.TEXT_MUTED
+charCounter.TextXAlignment = Enum.TextXAlignment.Right
+charCounter.Parent = counterContainer
+
+local minCharsLabel = Instance.new("TextLabel")
+minCharsLabel.Size = UDim2.new(0.5, 0, 1, 0)
+minCharsLabel.BackgroundTransparency = 1
+minCharsLabel.Text = "Min: 15"
+minCharsLabel.TextSize = scale.LABEL_SIZE - 1
+minCharsLabel.Font = Enum.Font.Gotham
+minCharsLabel.TextColor3 = COLORS.TEXT_MUTED
+minCharsLabel.TextXAlignment = Enum.TextXAlignment.Left
+minCharsLabel.Parent = counterContainer
+
+local submitButton = Instance.new("TextButton")
+submitButton.Size = UDim2.new(1, 0, 0, scale.BUTTON_HEIGHT)
+submitButton.Position = UDim2.new(0, 0, 1, -scale.BUTTON_HEIGHT - 22)
+submitButton.BackgroundColor3 = COLORS.PRIMARY
+submitButton.Text = ""
+submitButton.AutoButtonColor = false
+submitButton.BorderSizePixel = 0
+submitButton.BackgroundTransparency = 0
+submitButton.Parent = contentFrame
+
+local submitCorner = Instance.new("UICorner")
+submitCorner.CornerRadius = UDim.new(0, 8)
+submitCorner.Parent = submitButton
+
+local submitText = Instance.new("TextLabel")
+submitText.Size = UDim2.new(1, 0, 1, 0)
+submitText.BackgroundTransparency = 1
+submitText.Text = "📤 SUBMIT"
+submitText.TextSize = scale.TEXT_SIZE + 1
+submitText.Font = Enum.Font.GothamBold
+submitText.TextColor3 = COLORS.TEXT_PRIMARY
+submitText.Parent = submitButton
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 18)
+statusLabel.Position = UDim2.new(0, 0, 1, -18)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = ""
+statusLabel.TextSize = scale.LABEL_SIZE
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextColor3 = COLORS.SUCCESS
+statusLabel.Parent = contentFrame
+
+-- ════════════════ FUNCTIONS ════════════════
+
+textBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local length = string.len(textBox.Text)
+    charCounter.Text = tostring(length) .. " / 750"
+    
+    if length > 750 then
+        textBox.Text = string.sub(textBox.Text, 1, 750)
+    end
+    
+    if length >= 15 then
+        charCounter.TextColor3 = COLORS.SUCCESS
+        minCharsLabel.TextColor3 = COLORS.SUCCESS
+    else
+        charCounter.TextColor3 = COLORS.TEXT_MUTED
+        minCharsLabel.TextColor3 = COLORS.TEXT_MUTED
+    end
+end)
+
+local function showPanel()
+    mainFrame.Visible = true
+    mainFrame:TweenPosition(
+        UDim2.new(0.5, 0, 0, scale.PANEL_TOP),
+        Enum.EasingDirection.Out,
+        Enum.EasingStyle.Quad,
+        0.4,
+        true
+    )
+end
+
+local function hidePanel()
+    mainFrame:TweenPosition(
+        UDim2.new(0.5, 0, 0, -500),
+        Enum.EasingDirection.In,
+        Enum.EasingStyle.Quad,
+        0.3,
+        true,
+        function()
+            mainFrame.Visible = false
+            textBox.Text = ""
+            statusLabel.Text = ""
+            submitButton.BackgroundColor3 = COLORS.PRIMARY
+        end
+    )
+end
+
+-- ════════════════ EVENTS ════════════════
+
+openButton.MouseButton1Click:Connect(function()
+    showPanel()
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+    hidePanel()
+end)
+
+submitButton.MouseButton1Click:Connect(function()
+    local reportText = textBox.Text
+    
+    if reportText == "" or string.len(reportText) < 15 then
+        statusLabel.TextColor3 = COLORS.SECONDARY
+        statusLabel.Text = "⚠ Min 15 chars!"
+        
+        local originalPos = textBoxCard.Position
+        for i = 1, 3 do
+            textBoxCard.Position = originalPos + UDim2.new(0, 4, 0, 0)
+            wait(0.04)
+            textBoxCard.Position = originalPos + UDim2.new(0, -4, 0, 0)
+            wait(0.04)
+        end
+        textBoxCard.Position = originalPos
+        return
+    end
+    
+    submitButton.Active = false
+    submitText.Text = "⏳ SENDING"
+    submitButton.BackgroundColor3 = COLORS.TEXT_MUTED
+    
+    sendBugReport:FireServer(reportText)
+    
+    wait(0.5)
+    statusLabel.TextColor3 = COLORS.SUCCESS
+    statusLabel.Text = "✓ Sent!"
+    submitText.Text = "✓ SENT"
+    submitButton.BackgroundColor3 = COLORS.SUCCESS
+    
+    wait(1.5)
+    hidePanel()
+    submitButton.Active = true
+    submitText.Text = "📤 SUBMIT"
+end)
+
+openButton.MouseEnter:Connect(function()
+    TweenService:Create(openButton, TweenInfo.new(0.2), {
+        BackgroundColor3 = COLORS.PRIMARY_HOVER
+    }):Play()
+end)
+
+openButton.MouseLeave:Connect(function()
+    TweenService:Create(openButton, TweenInfo.new(0.2), {
+        BackgroundColor3 = COLORS.PRIMARY
+    }):Play()
+end)
+
+closeButton.MouseEnter:Connect(function()
+    closeButton.BackgroundColor3 = COLORS.SECONDARY
+    closeIcon.TextColor3 = COLORS.TEXT_PRIMARY
+end)
+
+closeButton.MouseLeave:Connect(function()
+    closeButton.BackgroundColor3 = COLORS.CARD
+    closeIcon.TextColor3 = COLORS.TEXT_SECONDARY
+end)
+
+submitButton.MouseEnter:Connect(function()
+    if submitButton.Active then
+        submitButton.BackgroundColor3 = COLORS.PRIMARY_HOVER
+    end
+end)
+
+submitButton.MouseLeave:Connect(function()
+    if submitButton.Active then
+        submitButton.BackgroundColor3 = COLORS.PRIMARY
+    end
+end)
+
+print("✓ Ultra Compact Bug Report - Center Top")
+print("Platform:", isMobile and "Mobile" or "PC")
+print("Author: ItoRenz")
