@@ -1,0 +1,310 @@
+-- ═══════════════════════════════════════════════════════════
+--  PROFESSIONAL ISSUE TRACKING SYSTEM - SERVER MODULE
+--  Enterprise-Grade Discord Integration with Advanced Security
+--  
+--  Author: ItoRenz00
+--  Version: 1.0.0
+--  Last Updated: 2025
+-- ═══════════════════════════════════════════════════════════
+
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+-- ════════════════ CONFIGURATION ════════════════
+local CONFIG = {
+    WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
+    COOLDOWN = 90,              -- Seconds between reports per user
+    MIN_LENGTH = 15,            -- Minimum characters
+    MAX_LENGTH = 750,           -- Maximum characters
+    RATE_LIMIT = 10,            -- Max reports per hour globally
+    EMBED_COLOR = 0x8A2BE2      -- Premium Purple
+}
+
+-- ════════════════ STATE MANAGEMENT ════════════════
+local userCooldowns = {}
+local hourlyReports = 0
+local lastHourReset = os.time()
+
+-- ════════════════ REMOTE EVENT SETUP ════════════════
+local sendBugReport = Instance.new("RemoteEvent")
+sendBugReport.Name = "SendBugReport"
+sendBugReport.Parent = ReplicatedStorage
+
+-- ════════════════ UTILITY FUNCTIONS ════════════════
+
+-- Sanitize text input
+local function sanitizeText(text)
+    if type(text) ~= "string" then return nil end
+    
+    -- Remove excessive whitespace
+    text = text:gsub("%s+", " ")
+    text = text:match("^%s*(.-)%s*$")
+    
+    return text
+end
+
+-- Check for spam patterns
+local function isSpamContent(text)
+    local lowerText = string.lower(text)
+    
+    local spamPatterns = {
+        "^(.+)%1%1%1",           -- Repeated characters (aaaa, testtest)
+        "^test+$",                -- Just "test"
+        "^spam+$",                -- Just "spam"
+        "^%.+$",                  -- Just dots
+        "^%d+$"                   -- Just numbers
+    }
+    
+    for _, pattern in ipairs(spamPatterns) do
+        if string.match(lowerText, pattern) then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- Format Discord timestamp
+local function getDiscordTimestamp()
+    return os.date("!%Y-%m-%dT%H:%M:%SZ")
+end
+
+-- Get player information
+local function getPlayerInfo(player)
+    local accountAge = player.AccountAge
+    local membershipType = player.MembershipType.Name
+    
+    return {
+        name = player.Name,
+        displayName = player.DisplayName,
+        userId = player.UserId,
+        accountAge = accountAge .. " days",
+        membership = membershipType,
+        locale = player.LocaleId or "Unknown"
+    }
+end
+
+-- ════════════════ DISCORD INTEGRATION ════════════════
+
+local function sendToDiscord(playerInfo, reportText)
+    -- Create premium embed
+    local embed = {
+        ["title"] = "⚡ NEW ISSUE REPORT",
+        ["description"] = "A player has submitted a bug report",
+        ["color"] = CONFIG.EMBED_COLOR,
+        ["fields"] = {
+            {
+                ["name"] = "👤 Player Information",
+                ["value"] = string.format(
+                    "**Name:** %s (@%s)\n**User ID:** `%d`\n**Account Age:** %s\n**Membership:** %s",
+                    playerInfo.displayName,
+                    playerInfo.name,
+                    playerInfo.userId,
+                    playerInfo.accountAge,
+                    playerInfo.membership
+                ),
+                ["inline"] = false
+            },
+            {
+                ["name"] = "📋 Issue Description",
+                ["value"] = "```" .. reportText .. "```",
+                ["inline"] = false
+            },
+            {
+                ["name"] = "🌍 Locale",
+                ["value"] = playerInfo.locale,
+                ["inline"] = true
+            },
+            {
+                ["name"] = "🕐 Reported At",
+                ["value"] = string.format("<t:%d:F>", os.time()),
+                ["inline"] = true
+            }
+        },
+        ["footer"] = {
+            ["text"] = "Professional Issue Tracking System • Powered by Roblox",
+            ["icon_url"] = "https://cdn.discordapp.com/emojis/YOUR_EMOJI_ID.png"
+        },
+        ["timestamp"] = getDiscordTimestamp(),
+        ["thumbnail"] = {
+            ["url"] = string.format("https://www.roblox.com/headshot-thumbnail/image?userId=%d&width=150&height=150&format=png", playerInfo.userId)
+        }
+    }
+    
+    -- Add separator line
+    local separatorEmbed = {
+        ["description"] = "═══════════════════════════════════════",
+        ["color"] = CONFIG.EMBED_COLOR
+    }
+    
+    local data = {
+        ["username"] = "Bug Report System",
+        ["avatar_url"] = "https://cdn.discordapp.com/emojis/YOUR_AVATAR_EMOJI.png",
+        ["embeds"] = {embed}
+    }
+    
+    -- Send request
+    local success, response = pcall(function()
+        return HttpService:PostAsync(
+            CONFIG.WEBHOOK_URL,
+            HttpService:JSONEncode(data),
+            Enum.HttpContentType.ApplicationJson,
+            false
+        )
+    end)
+    
+    return success, response
+end
+
+-- ════════════════ COOLDOWN MANAGEMENT ════════════════
+
+local function checkCooldown(userId)
+    local currentTime = tick()
+    
+    if userCooldowns[userId] then
+        local timeElapsed = currentTime - userCooldowns[userId]
+        local timeLeft = CONFIG.COOLDOWN - timeElapsed
+        
+        if timeLeft > 0 then
+            return false, math.ceil(timeLeft)
+        end
+    end
+    
+    return true, 0
+end
+
+local function setCooldown(userId)
+    userCooldowns[userId] = tick()
+    
+    -- Auto cleanup after cooldown expires
+    task.delay(CONFIG.COOLDOWN, function()
+        if userCooldowns[userId] then
+            userCooldowns[userId] = nil
+        end
+    end)
+end
+
+-- ════════════════ RATE LIMITING ════════════════
+
+local function checkRateLimit()
+    local currentTime = os.time()
+    
+    -- Reset hourly counter
+    if currentTime - lastHourReset >= 3600 then
+        hourlyReports = 0
+        lastHourReset = currentTime
+    end
+    
+    if hourlyReports >= CONFIG.RATE_LIMIT then
+        return false
+    end
+    
+    hourlyReports = hourlyReports + 1
+    return true
+end
+
+-- ════════════════ VALIDATION ════════════════
+
+local function validateReport(player, reportText)
+    -- Type validation
+    if type(reportText) ~= "string" then
+        return false, "Invalid data type"
+    end
+    
+    -- Sanitize
+    reportText = sanitizeText(reportText)
+    if not reportText then
+        return false, "Invalid content"
+    end
+    
+    -- Length validation
+    local length = #reportText
+    if length < CONFIG.MIN_LENGTH then
+        return false, string.format("Report too short (min: %d chars)", CONFIG.MIN_LENGTH)
+    end
+    
+    if length > CONFIG.MAX_LENGTH then
+        return false, string.format("Report too long (max: %d chars)", CONFIG.MAX_LENGTH)
+    end
+    
+    -- Spam detection
+    if isSpamContent(reportText) then
+        return false, "Spam content detected"
+    end
+    
+    -- Cooldown check
+    local canReport, timeLeft = checkCooldown(player.UserId)
+    if not canReport then
+        return false, string.format("Cooldown active (%ds remaining)", timeLeft)
+    end
+    
+    -- Rate limit check
+    if not checkRateLimit() then
+        return false, "Global rate limit reached"
+    end
+    
+    return true, reportText
+end
+
+-- ════════════════ MAIN EVENT HANDLER ════════════════
+
+sendBugReport.OnServerEvent:Connect(function(player, reportText)
+    -- Initial checks
+    if not player or not player.Parent then
+        return
+    end
+    
+    -- Validate report
+    local isValid, result = validateReport(player, reportText)
+    
+    if not isValid then
+        warn(string.format("[BUG REPORT] ❌ Rejected from %s: %s", player.Name, result))
+        return
+    end
+    
+    -- Get player information
+    local playerInfo = getPlayerInfo(player)
+    
+    -- Send to Discord
+    local success, response = sendToDiscord(playerInfo, result)
+    
+    if success then
+        print(string.format("[BUG REPORT] ✅ Report from %s sent successfully", player.Name))
+        
+        -- Set cooldown
+        setCooldown(player.UserId)
+        
+        -- Log to analytics (optional)
+        -- AnalyticsService:FireEvent("BugReportSubmitted", player.UserId)
+    else
+        warn(string.format("[BUG REPORT] ❌ Discord webhook failed: %s", tostring(response)))
+    end
+end)
+
+-- ════════════════ CLEANUP ════════════════
+
+Players.PlayerRemoving:Connect(function(player)
+    -- Remove cooldown when player leaves
+    if userCooldowns[player.UserId] then
+        userCooldowns[player.UserId] = nil
+    end
+end)
+
+-- ════════════════ INITIALIZATION ════════════════
+
+print("═══════════════════════════════════════════════")
+print("✓ Professional Issue Tracking System Active")
+print("Author: ItoRenz")
+print("═══════════════════════════════════════════════")
+print("📊 Configuration:")
+print("  • Cooldown: " .. CONFIG.COOLDOWN .. "s per user")
+print("  • Rate Limit: " .. CONFIG.RATE_LIMIT .. " reports/hour")
+print("  • Length: " .. CONFIG.MIN_LENGTH .. "-" .. CONFIG.MAX_LENGTH .. " chars")
+print("═══════════════════════════════════════════════")
+
+-- Check if HTTP is enabled
+if not pcall(function() HttpService:GetAsync("https://httpbin.org/get") end) then
+    warn("⚠️  WARNING: HTTP Requests are DISABLED!")
+    warn("⚠️  Enable in Game Settings → Security → Allow HTTP Requests")
+end
