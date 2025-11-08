@@ -3,7 +3,7 @@
 --  Minimal Screen Obstruction - Center Top Position
 --  
 --  Author: ItoRenz00
---  Version: 1.0.0
+--  Version: 1.0.1
 --  Last Updated: 2025
 -- ═══════════════════════════════════════════════════════════
 
@@ -31,7 +31,7 @@ local SCALE = {
     -- Mobile (Ultra Compact)
     MOBILE = {
         BUTTON_SIZE = UDim2.new(0, 25, 0, 25),
-        BUTTON_POS = UDim2.new(0.5, 70, 0, 12),
+        BUTTON_POS = UDim2.new(0.5, -5, 0, 12),  -- ⭐ UPDATED
         PANEL_SIZE = UDim2.new(0, 240, 0, 260),
         PANEL_TOP = 45,
         HEADER_HEIGHT = 38,
@@ -45,7 +45,7 @@ local SCALE = {
     -- PC (Very Compact)
     PC = {
         BUTTON_SIZE = UDim2.new(0, 30, 0, 30),
-        BUTTON_POS = UDim2.new(0.5, -100, 0, 12),
+        BUTTON_POS = UDim2.new(0.5, -170, 0, 12),  -- ⭐ UPDATED
         PANEL_SIZE = UDim2.new(0, 320, 0, 340),
         PANEL_TOP = 50,
         HEADER_HEIGHT = 42,
@@ -434,6 +434,7 @@ submitButton.MouseLeave:Connect(function()
     end
 end)
 
-print("✓ Ultra Compact Bug Report - Center Top")
+print("✓ Ultra Compact Bug Report - Center Top (Updated Positions)")
 print("Platform:", isMobile and "Mobile" or "PC")
+print("Button Position:", isMobile and "Mobile: (0.5, -5, 0, 12)" or "PC: (0.5, -170, 0, 12)")
 print("Author: ItoRenz")
