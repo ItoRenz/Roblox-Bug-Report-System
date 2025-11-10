@@ -1,9 +1,10 @@
 -- ═══════════════════════════════════════════════════════════
 --  PROFESSIONAL BUG REPORTING SYSTEM - ULTRA COMPACT
 --  Minimal Screen Obstruction - Center Top Position
+--  + PLAYER REPORT SYSTEM
 --  
 --  Author: ItoRenz00
---  Version: 1.0.1
+--  Version: 2.1.0
 --  Last Updated: 2025
 -- ═══════════════════════════════════════════════════════════
 
@@ -23,6 +24,13 @@ if not sendBugReport then
     sendBugReport.Parent = ReplicatedStorage
 end
 
+local sendPlayerReport = ReplicatedStorage:FindFirstChild("SendPlayerReport")
+if not sendPlayerReport then
+    sendPlayerReport = Instance.new("RemoteEvent")
+    sendPlayerReport.Name = "SendPlayerReport"
+    sendPlayerReport.Parent = ReplicatedStorage
+end
+
 -- ════════════════ DEVICE DETECTION ════════════════
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
@@ -31,30 +39,34 @@ local SCALE = {
     -- Mobile (Ultra Compact)
     MOBILE = {
         BUTTON_SIZE = UDim2.new(0, 25, 0, 25),
-        BUTTON_POS = UDim2.new(0.5, -5, 0, 12),  -- ⭐ UPDATED
-        PANEL_SIZE = UDim2.new(0, 240, 0, 260),
+        BUTTON_POS = UDim2.new(0.5, -5, 0, 12),
+        PANEL_SIZE = UDim2.new(0, 240, 0, 360),
         PANEL_TOP = 45,
         HEADER_HEIGHT = 38,
-        TEXTBOX_HEIGHT = 100,
+        TEXTBOX_HEIGHT = 70,
         TITLE_SIZE = 13,
         LABEL_SIZE = 10,
         TEXT_SIZE = 10,
         BUTTON_HEIGHT = 32,
-        PADDING = 10
+        PADDING = 10,
+        TAB_HEIGHT = 28,
+        DROPDOWN_HEIGHT = 28
     },
     -- PC (Very Compact)
     PC = {
         BUTTON_SIZE = UDim2.new(0, 30, 0, 30),
-        BUTTON_POS = UDim2.new(0.5, -170, 0, 12),  -- ⭐ UPDATED
-        PANEL_SIZE = UDim2.new(0, 320, 0, 340),
+        BUTTON_POS = UDim2.new(0.5, -170, 0, 12),
+        PANEL_SIZE = UDim2.new(0, 320, 0, 440),
         PANEL_TOP = 50,
         HEADER_HEIGHT = 42,
-        TEXTBOX_HEIGHT = 130,
+        TEXTBOX_HEIGHT = 90,
         TITLE_SIZE = 14,
         LABEL_SIZE = 11,
         TEXT_SIZE = 11,
         BUTTON_HEIGHT = 36,
-        PADDING = 14
+        PADDING = 14,
+        TAB_HEIGHT = 32,
+        DROPDOWN_HEIGHT = 32
     }
 }
 
@@ -71,8 +83,14 @@ local COLORS = {
     TEXT_MUTED = Color3.fromRGB(125, 125, 135),
     SUCCESS = Color3.fromRGB(48, 209, 88),
     WARNING = Color3.fromRGB(255, 159, 10),
-    BORDER = Color3.fromRGB(55, 55, 60)
+    BORDER = Color3.fromRGB(55, 55, 60),
+    TAB_ACTIVE = Color3.fromRGB(138, 43, 226),
+    TAB_INACTIVE = Color3.fromRGB(45, 45, 50)
 }
+
+-- ════════════════ STATE ════════════════
+local currentTab = "BUG"
+local selectedPlayer = nil
 
 -- ════════════════ GUI SETUP ════════════════
 local screenGui = Instance.new("ScreenGui")
@@ -163,7 +181,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -60, 1, 0)
 title.Position = UDim2.new(0, scale.PADDING, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "⚡ REPORT ISSUE"
+title.Text = "⚡ REPORT SYSTEM"
 title.TextSize = scale.TITLE_SIZE
 title.Font = Enum.Font.GothamBold
 title.TextColor3 = COLORS.TEXT_PRIMARY
@@ -194,136 +212,485 @@ closeIcon.Font = Enum.Font.GothamBold
 closeIcon.TextColor3 = COLORS.TEXT_SECONDARY
 closeIcon.Parent = closeButton
 
--- ════════════════ COMPACT CONTENT ════════════════
-local contentFrame = Instance.new("Frame")
-contentFrame.Name = "Content"
-contentFrame.Size = UDim2.new(1, -scale.PADDING * 2, 1, -scale.HEADER_HEIGHT - scale.PADDING * 2)
-contentFrame.Position = UDim2.new(0, scale.PADDING, 0, scale.HEADER_HEIGHT + scale.PADDING)
-contentFrame.BackgroundTransparency = 1
-contentFrame.Parent = mainFrame
+-- ════════════════ TAB SYSTEM ════════════════
+local tabContainer = Instance.new("Frame")
+tabContainer.Name = "TabContainer"
+tabContainer.Size = UDim2.new(1, -scale.PADDING * 2, 0, scale.TAB_HEIGHT)
+tabContainer.Position = UDim2.new(0, scale.PADDING, 0, scale.HEADER_HEIGHT + scale.PADDING)
+tabContainer.BackgroundTransparency = 1
+tabContainer.Parent = mainFrame
 
-local instructionsLabel = Instance.new("TextLabel")
-instructionsLabel.Size = UDim2.new(1, 0, 0, 18)
-instructionsLabel.BackgroundTransparency = 1
-instructionsLabel.Text = "Describe the issue"
-instructionsLabel.TextSize = scale.LABEL_SIZE
-instructionsLabel.Font = Enum.Font.GothamMedium
-instructionsLabel.TextColor3 = COLORS.TEXT_SECONDARY
-instructionsLabel.TextXAlignment = Enum.TextXAlignment.Left
-instructionsLabel.Parent = contentFrame
+local bugTab = Instance.new("TextButton")
+bugTab.Name = "BugTab"
+bugTab.Size = UDim2.new(0.5, -2, 1, 0)
+bugTab.Position = UDim2.new(0, 0, 0, 0)
+bugTab.BackgroundColor3 = COLORS.TAB_ACTIVE
+bugTab.Text = ""
+bugTab.AutoButtonColor = false
+bugTab.BorderSizePixel = 0
+bugTab.Parent = tabContainer
 
-local textBoxCard = Instance.new("Frame")
-textBoxCard.Size = UDim2.new(1, 0, 0, scale.TEXTBOX_HEIGHT)
-textBoxCard.Position = UDim2.new(0, 0, 0, 22)
-textBoxCard.BackgroundColor3 = COLORS.CARD
-textBoxCard.BorderSizePixel = 0
-textBoxCard.BackgroundTransparency = 0
-textBoxCard.Parent = contentFrame
+local bugTabCorner = Instance.new("UICorner")
+bugTabCorner.CornerRadius = UDim.new(0, 7)
+bugTabCorner.Parent = bugTab
 
-local cardCorner = Instance.new("UICorner")
-cardCorner.CornerRadius = UDim.new(0, 8)
-cardCorner.Parent = textBoxCard
+local bugTabLabel = Instance.new("TextLabel")
+bugTabLabel.Size = UDim2.new(1, 0, 1, 0)
+bugTabLabel.BackgroundTransparency = 1
+bugTabLabel.Text = "Bug"
+bugTabLabel.TextSize = scale.LABEL_SIZE
+bugTabLabel.Font = Enum.Font.GothamBold
+bugTabLabel.TextColor3 = COLORS.TEXT_PRIMARY
+bugTabLabel.Parent = bugTab
 
-local cardStroke = Instance.new("UIStroke")
-cardStroke.Color = COLORS.BORDER
-cardStroke.Thickness = 1
-cardStroke.Transparency = 0.5
-cardStroke.Parent = textBoxCard
+local playerTab = Instance.new("TextButton")
+playerTab.Name = "PlayerTab"
+playerTab.Size = UDim2.new(0.5, -2, 1, 0)
+playerTab.Position = UDim2.new(0.5, 2, 0, 0)
+playerTab.BackgroundColor3 = COLORS.TAB_INACTIVE
+playerTab.Text = ""
+playerTab.AutoButtonColor = false
+playerTab.BorderSizePixel = 0
+playerTab.Parent = tabContainer
 
-local textBox = Instance.new("TextBox")
-textBox.Size = UDim2.new(1, -14, 1, -14)
-textBox.Position = UDim2.new(0, 7, 0, 7)
-textBox.BackgroundTransparency = 1
-textBox.Text = ""
-textBox.PlaceholderText = "When I press jump, character freezes..."
-textBox.TextSize = scale.TEXT_SIZE
-textBox.Font = Enum.Font.Gotham
-textBox.TextColor3 = COLORS.TEXT_PRIMARY
-textBox.PlaceholderColor3 = COLORS.TEXT_MUTED
-textBox.TextXAlignment = Enum.TextXAlignment.Left
-textBox.TextYAlignment = Enum.TextYAlignment.Top
-textBox.MultiLine = true
-textBox.ClearTextOnFocus = false
-textBox.TextWrapped = true
-textBox.Parent = textBoxCard
+local playerTabCorner = Instance.new("UICorner")
+playerTabCorner.CornerRadius = UDim.new(0, 7)
+playerTabCorner.Parent = playerTab
 
-local counterContainer = Instance.new("Frame")
-counterContainer.Size = UDim2.new(1, 0, 0, 18)
-counterContainer.Position = UDim2.new(0, 0, 0, scale.TEXTBOX_HEIGHT + 26)
-counterContainer.BackgroundTransparency = 1
-counterContainer.Parent = contentFrame
+local playerTabLabel = Instance.new("TextLabel")
+playerTabLabel.Size = UDim2.new(1, 0, 1, 0)
+playerTabLabel.BackgroundTransparency = 1
+playerTabLabel.Text = "Player"
+playerTabLabel.TextSize = scale.LABEL_SIZE
+playerTabLabel.Font = Enum.Font.GothamBold
+playerTabLabel.TextColor3 = COLORS.TEXT_MUTED
+playerTabLabel.Parent = playerTab
 
-local charCounter = Instance.new("TextLabel")
-charCounter.Size = UDim2.new(0.5, 0, 1, 0)
-charCounter.Position = UDim2.new(1, 0, 0, 0)
-charCounter.AnchorPoint = Vector2.new(1, 0)
-charCounter.BackgroundTransparency = 1
-charCounter.Text = "0 / 750"
-charCounter.TextSize = scale.LABEL_SIZE - 1
-charCounter.Font = Enum.Font.GothamMedium
-charCounter.TextColor3 = COLORS.TEXT_MUTED
-charCounter.TextXAlignment = Enum.TextXAlignment.Right
-charCounter.Parent = counterContainer
+-- ════════════════ BUG REPORT CONTENT ════════════════
+local bugContent = Instance.new("Frame")
+bugContent.Name = "BugContent"
+bugContent.Size = UDim2.new(1, -scale.PADDING * 2, 1, -scale.HEADER_HEIGHT - scale.TAB_HEIGHT - scale.PADDING * 3)
+bugContent.Position = UDim2.new(0, scale.PADDING, 0, scale.HEADER_HEIGHT + scale.TAB_HEIGHT + scale.PADDING * 2)
+bugContent.BackgroundTransparency = 1
+bugContent.Visible = true
+bugContent.Parent = mainFrame
 
-local minCharsLabel = Instance.new("TextLabel")
-minCharsLabel.Size = UDim2.new(0.5, 0, 1, 0)
-minCharsLabel.BackgroundTransparency = 1
-minCharsLabel.Text = "Min: 15"
-minCharsLabel.TextSize = scale.LABEL_SIZE - 1
-minCharsLabel.Font = Enum.Font.Gotham
-minCharsLabel.TextColor3 = COLORS.TEXT_MUTED
-minCharsLabel.TextXAlignment = Enum.TextXAlignment.Left
-minCharsLabel.Parent = counterContainer
+local bugInstructionsLabel = Instance.new("TextLabel")
+bugInstructionsLabel.Size = UDim2.new(1, 0, 0, 18)
+bugInstructionsLabel.BackgroundTransparency = 1
+bugInstructionsLabel.Text = "Describe the issue"
+bugInstructionsLabel.TextSize = scale.LABEL_SIZE
+bugInstructionsLabel.Font = Enum.Font.GothamMedium
+bugInstructionsLabel.TextColor3 = COLORS.TEXT_SECONDARY
+bugInstructionsLabel.TextXAlignment = Enum.TextXAlignment.Left
+bugInstructionsLabel.Parent = bugContent
 
-local submitButton = Instance.new("TextButton")
-submitButton.Size = UDim2.new(1, 0, 0, scale.BUTTON_HEIGHT)
-submitButton.Position = UDim2.new(0, 0, 1, -scale.BUTTON_HEIGHT - 22)
-submitButton.BackgroundColor3 = COLORS.PRIMARY
-submitButton.Text = ""
-submitButton.AutoButtonColor = false
-submitButton.BorderSizePixel = 0
-submitButton.BackgroundTransparency = 0
-submitButton.Parent = contentFrame
+local bugTextBoxCard = Instance.new("Frame")
+bugTextBoxCard.Size = UDim2.new(1, 0, 0, scale.TEXTBOX_HEIGHT)
+bugTextBoxCard.Position = UDim2.new(0, 0, 0, 22)
+bugTextBoxCard.BackgroundColor3 = COLORS.CARD
+bugTextBoxCard.BorderSizePixel = 0
+bugTextBoxCard.BackgroundTransparency = 0
+bugTextBoxCard.Parent = bugContent
 
-local submitCorner = Instance.new("UICorner")
-submitCorner.CornerRadius = UDim.new(0, 8)
-submitCorner.Parent = submitButton
+local bugCardCorner = Instance.new("UICorner")
+bugCardCorner.CornerRadius = UDim.new(0, 8)
+bugCardCorner.Parent = bugTextBoxCard
 
-local submitText = Instance.new("TextLabel")
-submitText.Size = UDim2.new(1, 0, 1, 0)
-submitText.BackgroundTransparency = 1
-submitText.Text = "📤 SUBMIT"
-submitText.TextSize = scale.TEXT_SIZE + 1
-submitText.Font = Enum.Font.GothamBold
-submitText.TextColor3 = COLORS.TEXT_PRIMARY
-submitText.Parent = submitButton
+local bugCardStroke = Instance.new("UIStroke")
+bugCardStroke.Color = COLORS.BORDER
+bugCardStroke.Thickness = 1
+bugCardStroke.Transparency = 0.5
+bugCardStroke.Parent = bugTextBoxCard
 
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, 0, 0, 18)
-statusLabel.Position = UDim2.new(0, 0, 1, -18)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = ""
-statusLabel.TextSize = scale.LABEL_SIZE
-statusLabel.Font = Enum.Font.GothamBold
-statusLabel.TextColor3 = COLORS.SUCCESS
-statusLabel.Parent = contentFrame
+local bugTextBox = Instance.new("TextBox")
+bugTextBox.Size = UDim2.new(1, -14, 1, -14)
+bugTextBox.Position = UDim2.new(0, 7, 0, 7)
+bugTextBox.BackgroundTransparency = 1
+bugTextBox.Text = ""
+bugTextBox.PlaceholderText = "When I press jump, character freezes..."
+bugTextBox.TextSize = scale.TEXT_SIZE
+bugTextBox.Font = Enum.Font.Gotham
+bugTextBox.TextColor3 = COLORS.TEXT_PRIMARY
+bugTextBox.PlaceholderColor3 = COLORS.TEXT_MUTED
+bugTextBox.TextXAlignment = Enum.TextXAlignment.Left
+bugTextBox.TextYAlignment = Enum.TextYAlignment.Top
+bugTextBox.MultiLine = true
+bugTextBox.ClearTextOnFocus = false
+bugTextBox.TextWrapped = true
+bugTextBox.Parent = bugTextBoxCard
+
+local bugCounterContainer = Instance.new("Frame")
+bugCounterContainer.Size = UDim2.new(1, 0, 0, 18)
+bugCounterContainer.Position = UDim2.new(0, 0, 0, scale.TEXTBOX_HEIGHT + 26)
+bugCounterContainer.BackgroundTransparency = 1
+bugCounterContainer.Parent = bugContent
+
+local bugCharCounter = Instance.new("TextLabel")
+bugCharCounter.Size = UDim2.new(0.5, 0, 1, 0)
+bugCharCounter.Position = UDim2.new(1, 0, 0, 0)
+bugCharCounter.AnchorPoint = Vector2.new(1, 0)
+bugCharCounter.BackgroundTransparency = 1
+bugCharCounter.Text = "0 / 750"
+bugCharCounter.TextSize = scale.LABEL_SIZE - 1
+bugCharCounter.Font = Enum.Font.GothamMedium
+bugCharCounter.TextColor3 = COLORS.TEXT_MUTED
+bugCharCounter.TextXAlignment = Enum.TextXAlignment.Right
+bugCharCounter.Parent = bugCounterContainer
+
+local bugMinCharsLabel = Instance.new("TextLabel")
+bugMinCharsLabel.Size = UDim2.new(0.5, 0, 1, 0)
+bugMinCharsLabel.BackgroundTransparency = 1
+bugMinCharsLabel.Text = "Min: 10"
+bugMinCharsLabel.TextSize = scale.LABEL_SIZE - 1
+bugMinCharsLabel.Font = Enum.Font.Gotham
+bugMinCharsLabel.TextColor3 = COLORS.TEXT_MUTED
+bugMinCharsLabel.TextXAlignment = Enum.TextXAlignment.Left
+bugMinCharsLabel.Parent = bugCounterContainer
+
+local bugSubmitButton = Instance.new("TextButton")
+bugSubmitButton.Size = UDim2.new(1, 0, 0, scale.BUTTON_HEIGHT)
+bugSubmitButton.Position = UDim2.new(0, 0, 1, -scale.BUTTON_HEIGHT - 22)
+bugSubmitButton.BackgroundColor3 = COLORS.PRIMARY
+bugSubmitButton.Text = ""
+bugSubmitButton.AutoButtonColor = false
+bugSubmitButton.BorderSizePixel = 0
+bugSubmitButton.BackgroundTransparency = 0
+bugSubmitButton.Parent = bugContent
+
+local bugSubmitCorner = Instance.new("UICorner")
+bugSubmitCorner.CornerRadius = UDim.new(0, 8)
+bugSubmitCorner.Parent = bugSubmitButton
+
+local bugSubmitText = Instance.new("TextLabel")
+bugSubmitText.Size = UDim2.new(1, 0, 1, 0)
+bugSubmitText.BackgroundTransparency = 1
+bugSubmitText.Text = "📤 SUBMIT"
+bugSubmitText.TextSize = scale.TEXT_SIZE + 1
+bugSubmitText.Font = Enum.Font.GothamBold
+bugSubmitText.TextColor3 = COLORS.TEXT_PRIMARY
+bugSubmitText.Parent = bugSubmitButton
+
+local bugStatusLabel = Instance.new("TextLabel")
+bugStatusLabel.Size = UDim2.new(1, 0, 0, 18)
+bugStatusLabel.Position = UDim2.new(0, 0, 1, -18)
+bugStatusLabel.BackgroundTransparency = 1
+bugStatusLabel.Text = ""
+bugStatusLabel.TextSize = scale.LABEL_SIZE
+bugStatusLabel.Font = Enum.Font.GothamBold
+bugStatusLabel.TextColor3 = COLORS.SUCCESS
+bugStatusLabel.Parent = bugContent
+
+-- ════════════════ PLAYER REPORT CONTENT ════════════════
+local playerContent = Instance.new("Frame")
+playerContent.Name = "PlayerContent"
+playerContent.Size = UDim2.new(1, -scale.PADDING * 2, 1, -scale.HEADER_HEIGHT - scale.TAB_HEIGHT - scale.PADDING * 3)
+playerContent.Position = UDim2.new(0, scale.PADDING, 0, scale.HEADER_HEIGHT + scale.TAB_HEIGHT + scale.PADDING * 2)
+playerContent.BackgroundTransparency = 1
+playerContent.Visible = false
+playerContent.Parent = mainFrame
+
+local playerInstructionsLabel = Instance.new("TextLabel")
+playerInstructionsLabel.Size = UDim2.new(1, 0, 0, 18)
+playerInstructionsLabel.BackgroundTransparency = 1
+playerInstructionsLabel.Text = "Select player to report"
+playerInstructionsLabel.TextSize = scale.LABEL_SIZE
+playerInstructionsLabel.Font = Enum.Font.GothamMedium
+playerInstructionsLabel.TextColor3 = COLORS.TEXT_SECONDARY
+playerInstructionsLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerInstructionsLabel.Parent = playerContent
+
+-- Player Dropdown
+local playerDropdown = Instance.new("TextButton")
+playerDropdown.Size = UDim2.new(1, 0, 0, scale.DROPDOWN_HEIGHT)
+playerDropdown.Position = UDim2.new(0, 0, 0, 22)
+playerDropdown.BackgroundColor3 = COLORS.CARD
+playerDropdown.Text = ""
+playerDropdown.AutoButtonColor = false
+playerDropdown.BorderSizePixel = 0
+playerDropdown.Parent = playerContent
+
+local playerDropdownCorner = Instance.new("UICorner")
+playerDropdownCorner.CornerRadius = UDim.new(0, 8)
+playerDropdownCorner.Parent = playerDropdown
+
+local playerDropdownStroke = Instance.new("UIStroke")
+playerDropdownStroke.Color = COLORS.BORDER
+playerDropdownStroke.Thickness = 1
+playerDropdownStroke.Transparency = 0.5
+playerDropdownStroke.Parent = playerDropdown
+
+local playerDropdownLabel = Instance.new("TextLabel")
+playerDropdownLabel.Size = UDim2.new(1, -30, 1, 0)
+playerDropdownLabel.Position = UDim2.new(0, 10, 0, 0)
+playerDropdownLabel.BackgroundTransparency = 1
+playerDropdownLabel.Text = "Click to select player..."
+playerDropdownLabel.TextSize = scale.TEXT_SIZE
+playerDropdownLabel.Font = Enum.Font.Gotham
+playerDropdownLabel.TextColor3 = COLORS.TEXT_MUTED
+playerDropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerDropdownLabel.Parent = playerDropdown
+
+local playerDropdownIcon = Instance.new("TextLabel")
+playerDropdownIcon.Size = UDim2.new(0, 20, 1, 0)
+playerDropdownIcon.Position = UDim2.new(1, -25, 0, 0)
+playerDropdownIcon.BackgroundTransparency = 1
+playerDropdownIcon.Text = "▼"
+playerDropdownIcon.TextSize = scale.TEXT_SIZE - 2
+playerDropdownIcon.Font = Enum.Font.GothamBold
+playerDropdownIcon.TextColor3 = COLORS.TEXT_MUTED
+playerDropdownIcon.Parent = playerDropdown
+
+-- Player List Frame
+local playerListFrame = Instance.new("ScrollingFrame")
+playerListFrame.Size = UDim2.new(1, 0, 0, isMobile and 80 or 100)
+playerListFrame.Position = UDim2.new(0, 0, 0, scale.DROPDOWN_HEIGHT + 26)
+playerListFrame.BackgroundColor3 = COLORS.CARD
+playerListFrame.BorderSizePixel = 0
+playerListFrame.ScrollBarThickness = 4
+playerListFrame.Visible = false
+playerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+playerListFrame.ZIndex = 250
+playerListFrame.Parent = playerContent
+
+local playerListCorner = Instance.new("UICorner")
+playerListCorner.CornerRadius = UDim.new(0, 8)
+playerListCorner.Parent = playerListFrame
+
+local playerListStroke = Instance.new("UIStroke")
+playerListStroke.Color = COLORS.BORDER
+playerListStroke.Thickness = 1.5
+playerListStroke.Transparency = 0.3
+playerListStroke.Parent = playerListFrame
+
+local playerListLayout = Instance.new("UIListLayout")
+playerListLayout.SortOrder = Enum.SortOrder.Name
+playerListLayout.Padding = UDim.new(0, 2)
+playerListLayout.Parent = playerListFrame
+
+-- Reason TextBox
+local playerReasonLabel = Instance.new("TextLabel")
+playerReasonLabel.Size = UDim2.new(1, 0, 0, 18)
+playerReasonLabel.Position = UDim2.new(0, 0, 0, scale.DROPDOWN_HEIGHT + (isMobile and 36 or 40))
+playerReasonLabel.BackgroundTransparency = 1
+playerReasonLabel.Text = "Reason for report"
+playerReasonLabel.TextSize = scale.LABEL_SIZE
+playerReasonLabel.Font = Enum.Font.GothamMedium
+playerReasonLabel.TextColor3 = COLORS.TEXT_SECONDARY
+playerReasonLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerReasonLabel.Parent = playerContent
+
+local playerTextBoxCard = Instance.new("Frame")
+playerTextBoxCard.Size = UDim2.new(1, 0, 0, scale.TEXTBOX_HEIGHT)
+playerTextBoxCard.Position = UDim2.new(0, 0, 0, scale.DROPDOWN_HEIGHT + (isMobile and 58 or 62))
+playerTextBoxCard.BackgroundColor3 = COLORS.CARD
+playerTextBoxCard.BorderSizePixel = 0
+playerTextBoxCard.Parent = playerContent
+
+local playerCardCorner = Instance.new("UICorner")
+playerCardCorner.CornerRadius = UDim.new(0, 8)
+playerCardCorner.Parent = playerTextBoxCard
+
+local playerCardStroke = Instance.new("UIStroke")
+playerCardStroke.Color = COLORS.BORDER
+playerCardStroke.Thickness = 1
+playerCardStroke.Transparency = 0.5
+playerCardStroke.Parent = playerTextBoxCard
+
+local playerTextBox = Instance.new("TextBox")
+playerTextBox.Size = UDim2.new(1, -14, 1, -14)
+playerTextBox.Position = UDim2.new(0, 7, 0, 7)
+playerTextBox.BackgroundTransparency = 1
+playerTextBox.Text = ""
+playerTextBox.PlaceholderText = "Cheating, harassment, etc..."
+playerTextBox.TextSize = scale.TEXT_SIZE
+playerTextBox.Font = Enum.Font.Gotham
+playerTextBox.TextColor3 = COLORS.TEXT_PRIMARY
+playerTextBox.PlaceholderColor3 = COLORS.TEXT_MUTED
+playerTextBox.TextXAlignment = Enum.TextXAlignment.Left
+playerTextBox.TextYAlignment = Enum.TextYAlignment.Top
+playerTextBox.MultiLine = true
+playerTextBox.ClearTextOnFocus = false
+playerTextBox.TextWrapped = true
+playerTextBox.Parent = playerTextBoxCard
+
+local playerCounterContainer = Instance.new("Frame")
+playerCounterContainer.Size = UDim2.new(1, 0, 0, 18)
+playerCounterContainer.Position = UDim2.new(0, 0, 0, scale.DROPDOWN_HEIGHT + scale.TEXTBOX_HEIGHT + (isMobile and 62 or 66))
+playerCounterContainer.BackgroundTransparency = 1
+playerCounterContainer.Parent = playerContent
+
+local playerCharCounter = Instance.new("TextLabel")
+playerCharCounter.Size = UDim2.new(0.5, 0, 1, 0)
+playerCharCounter.Position = UDim2.new(1, 0, 0, 0)
+playerCharCounter.AnchorPoint = Vector2.new(1, 0)
+playerCharCounter.BackgroundTransparency = 1
+playerCharCounter.Text = "0 / 500"
+playerCharCounter.TextSize = scale.LABEL_SIZE - 1
+playerCharCounter.Font = Enum.Font.GothamMedium
+playerCharCounter.TextColor3 = COLORS.TEXT_MUTED
+playerCharCounter.TextXAlignment = Enum.TextXAlignment.Right
+playerCharCounter.Parent = playerCounterContainer
+
+local playerMinCharsLabel = Instance.new("TextLabel")
+playerMinCharsLabel.Size = UDim2.new(0.5, 0, 1, 0)
+playerMinCharsLabel.BackgroundTransparency = 1
+playerMinCharsLabel.Text = "Min: 5"
+playerMinCharsLabel.TextSize = scale.LABEL_SIZE - 1
+playerMinCharsLabel.Font = Enum.Font.Gotham
+playerMinCharsLabel.TextColor3 = COLORS.TEXT_MUTED
+playerMinCharsLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerMinCharsLabel.Parent = playerCounterContainer
+
+local playerSubmitButton = Instance.new("TextButton")
+playerSubmitButton.Size = UDim2.new(1, 0, 0, scale.BUTTON_HEIGHT)
+playerSubmitButton.Position = UDim2.new(0, 0, 1, -scale.BUTTON_HEIGHT - 22)
+playerSubmitButton.BackgroundColor3 = COLORS.PRIMARY
+playerSubmitButton.Text = ""
+playerSubmitButton.AutoButtonColor = false
+playerSubmitButton.BorderSizePixel = 0
+playerSubmitButton.Parent = playerContent
+
+local playerSubmitCorner = Instance.new("UICorner")
+playerSubmitCorner.CornerRadius = UDim.new(0, 8)
+playerSubmitCorner.Parent = playerSubmitButton
+
+local playerSubmitText = Instance.new("TextLabel")
+playerSubmitText.Size = UDim2.new(1, 0, 1, 0)
+playerSubmitText.BackgroundTransparency = 1
+playerSubmitText.Text = "📤 REPORT PLAYER"
+playerSubmitText.TextSize = scale.TEXT_SIZE + 1
+playerSubmitText.Font = Enum.Font.GothamBold
+playerSubmitText.TextColor3 = COLORS.TEXT_PRIMARY
+playerSubmitText.Parent = playerSubmitButton
+
+local playerStatusLabel = Instance.new("TextLabel")
+playerStatusLabel.Size = UDim2.new(1, 0, 0, 18)
+playerStatusLabel.Position = UDim2.new(0, 0, 1, -18)
+playerStatusLabel.BackgroundTransparency = 1
+playerStatusLabel.Text = ""
+playerStatusLabel.TextSize = scale.LABEL_SIZE
+playerStatusLabel.Font = Enum.Font.GothamBold
+playerStatusLabel.TextColor3 = COLORS.SUCCESS
+playerStatusLabel.Parent = playerContent
 
 -- ════════════════ FUNCTIONS ════════════════
 
-textBox:GetPropertyChangedSignal("Text"):Connect(function()
-    local length = string.len(textBox.Text)
-    charCounter.Text = tostring(length) .. " / 750"
-    
-    if length > 750 then
-        textBox.Text = string.sub(textBox.Text, 1, 750)
+local function updatePlayerList()
+    for _, child in ipairs(playerListFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
     end
     
-    if length >= 15 then
-        charCounter.TextColor3 = COLORS.SUCCESS
-        minCharsLabel.TextColor3 = COLORS.SUCCESS
+    local playerList = Players:GetPlayers()
+    local yOffset = 0
+    
+    for _, plr in ipairs(playerList) do
+        if plr ~= player then
+            local playerBtn = Instance.new("TextButton")
+            playerBtn.Size = UDim2.new(1, -8, 0, scale.DROPDOWN_HEIGHT - 4)
+            playerBtn.Position = UDim2.new(0, 4, 0, yOffset)
+            playerBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            playerBtn.Text = ""
+            playerBtn.AutoButtonColor = false
+            playerBtn.BorderSizePixel = 0
+            playerBtn.ZIndex = 251
+            playerBtn.Parent = playerListFrame
+            
+            local playerBtnCorner = Instance.new("UICorner")
+            playerBtnCorner.CornerRadius = UDim.new(0, 6)
+            playerBtnCorner.Parent = playerBtn
+            
+            local playerBtnLabel = Instance.new("TextLabel")
+            playerBtnLabel.Size = UDim2.new(1, -10, 1, 0)
+            playerBtnLabel.Position = UDim2.new(0, 5, 0, 0)
+            playerBtnLabel.BackgroundTransparency = 1
+            playerBtnLabel.Text = plr.DisplayName .. " (@" .. plr.Name .. ")"
+            playerBtnLabel.TextSize = scale.TEXT_SIZE - 1
+            playerBtnLabel.Font = Enum.Font.Gotham
+            playerBtnLabel.TextColor3 = COLORS.TEXT_PRIMARY
+            playerBtnLabel.TextXAlignment = Enum.TextXAlignment.Left
+            playerBtnLabel.TextTruncate = Enum.TextTruncate.AtEnd
+            playerBtnLabel.ZIndex = 252
+            playerBtnLabel.Parent = playerBtn
+            
+            playerBtn.MouseButton1Click:Connect(function()
+                selectedPlayer = plr
+                playerDropdownLabel.Text = plr.DisplayName .. " (@" .. plr.Name .. ")"
+                playerDropdownLabel.TextColor3 = COLORS.TEXT_PRIMARY
+                playerListFrame.Visible = false
+            end)
+            
+            playerBtn.MouseEnter:Connect(function()
+                playerBtn.BackgroundColor3 = COLORS.PRIMARY
+            end)
+            
+            playerBtn.MouseLeave:Connect(function()
+                playerBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            end)
+            
+            yOffset = yOffset + scale.DROPDOWN_HEIGHT
+        end
+    end
+    
+    playerListFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+end
+
+local function switchTab(tab)
+    currentTab = tab
+    
+    if tab == "BUG" then
+        bugTab.BackgroundColor3 = COLORS.TAB_ACTIVE
+        bugTabLabel.TextColor3 = COLORS.TEXT_PRIMARY
+        playerTab.BackgroundColor3 = COLORS.TAB_INACTIVE
+        playerTabLabel.TextColor3 = COLORS.TEXT_MUTED
+        
+        bugContent.Visible = true
+        playerContent.Visible = false
     else
-        charCounter.TextColor3 = COLORS.TEXT_MUTED
-        minCharsLabel.TextColor3 = COLORS.TEXT_MUTED
+        bugTab.BackgroundColor3 = COLORS.TAB_INACTIVE
+        bugTabLabel.TextColor3 = COLORS.TEXT_MUTED
+        playerTab.BackgroundColor3 = COLORS.TAB_ACTIVE
+        playerTabLabel.TextColor3 = COLORS.TEXT_PRIMARY
+        
+        bugContent.Visible = false
+        playerContent.Visible = true
+        updatePlayerList()
+    end
+end
+
+bugTextBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local length = string.len(bugTextBox.Text)
+    bugCharCounter.Text = tostring(length) .. " / 750"
+    
+    if length > 750 then
+        bugTextBox.Text = string.sub(bugTextBox.Text, 1, 750)
+    end
+    
+    if length >= 10 then
+        bugCharCounter.TextColor3 = COLORS.SUCCESS
+        bugMinCharsLabel.TextColor3 = COLORS.SUCCESS
+    else
+        bugCharCounter.TextColor3 = COLORS.TEXT_MUTED
+        bugMinCharsLabel.TextColor3 = COLORS.TEXT_MUTED
+    end
+end)
+
+playerTextBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local length = string.len(playerTextBox.Text)
+    playerCharCounter.Text = tostring(length) .. " / 500"
+    
+    if length > 500 then
+        playerTextBox.Text = string.sub(playerTextBox.Text, 1, 500)
+    end
+    
+    if length >= 5 then
+        playerCharCounter.TextColor3 = COLORS.SUCCESS
+        playerMinCharsLabel.TextColor3 = COLORS.SUCCESS
+    else
+        playerCharCounter.TextColor3 = COLORS.TEXT_MUTED
+        playerMinCharsLabel.TextColor3 = COLORS.TEXT_MUTED
     end
 end)
 
@@ -347,9 +714,16 @@ local function hidePanel()
         true,
         function()
             mainFrame.Visible = false
-            textBox.Text = ""
-            statusLabel.Text = ""
-            submitButton.BackgroundColor3 = COLORS.PRIMARY
+            bugTextBox.Text = ""
+            playerTextBox.Text = ""
+            bugStatusLabel.Text = ""
+            playerStatusLabel.Text = ""
+            bugSubmitButton.BackgroundColor3 = COLORS.PRIMARY
+            playerSubmitButton.BackgroundColor3 = COLORS.PRIMARY
+            selectedPlayer = nil
+            playerDropdownLabel.Text = "Click to select player..."
+            playerDropdownLabel.TextColor3 = COLORS.TEXT_MUTED
+            playerListFrame.Visible = false
         end
     )
 end
@@ -364,40 +738,105 @@ closeButton.MouseButton1Click:Connect(function()
     hidePanel()
 end)
 
-submitButton.MouseButton1Click:Connect(function()
-    local reportText = textBox.Text
+bugTab.MouseButton1Click:Connect(function()
+    switchTab("BUG")
+end)
+
+playerTab.MouseButton1Click:Connect(function()
+    switchTab("PLAYER")
+end)
+
+playerDropdown.MouseButton1Click:Connect(function()
+    playerListFrame.Visible = not playerListFrame.Visible
+    if playerListFrame.Visible then
+        updatePlayerList()
+    end
+end)
+
+bugSubmitButton.MouseButton1Click:Connect(function()
+    local reportText = bugTextBox.Text
     
-    if reportText == "" or string.len(reportText) < 15 then
-        statusLabel.TextColor3 = COLORS.SECONDARY
-        statusLabel.Text = "⚠ Min 15 chars!"
+    if reportText == "" or string.len(reportText) < 10 then
+        bugStatusLabel.TextColor3 = COLORS.SECONDARY
+        bugStatusLabel.Text = "⚠ Min 10 chars!"
         
-        local originalPos = textBoxCard.Position
+        local originalPos = bugTextBoxCard.Position
         for i = 1, 3 do
-            textBoxCard.Position = originalPos + UDim2.new(0, 4, 0, 0)
+            bugTextBoxCard.Position = originalPos + UDim2.new(0, 4, 0, 0)
             wait(0.04)
-            textBoxCard.Position = originalPos + UDim2.new(0, -4, 0, 0)
+            bugTextBoxCard.Position = originalPos + UDim2.new(0, -4, 0, 0)
             wait(0.04)
         end
-        textBoxCard.Position = originalPos
+        bugTextBoxCard.Position = originalPos
         return
     end
     
-    submitButton.Active = false
-    submitText.Text = "⏳ SENDING"
-    submitButton.BackgroundColor3 = COLORS.TEXT_MUTED
+    bugSubmitButton.Active = false
+    bugSubmitText.Text = "⏳ SENDING"
+    bugSubmitButton.BackgroundColor3 = COLORS.TEXT_MUTED
     
     sendBugReport:FireServer(reportText)
     
     wait(0.5)
-    statusLabel.TextColor3 = COLORS.SUCCESS
-    statusLabel.Text = "✓ Sent!"
-    submitText.Text = "✓ SENT"
-    submitButton.BackgroundColor3 = COLORS.SUCCESS
+    bugStatusLabel.TextColor3 = COLORS.SUCCESS
+    bugStatusLabel.Text = "✓ Sent!"
+    bugSubmitText.Text = "✓ SENT"
+    bugSubmitButton.BackgroundColor3 = COLORS.SUCCESS
     
     wait(1.5)
     hidePanel()
-    submitButton.Active = true
-    submitText.Text = "📤 SUBMIT"
+    bugSubmitButton.Active = true
+    bugSubmitText.Text = "📤 SUBMIT"
+end)
+
+playerSubmitButton.MouseButton1Click:Connect(function()
+    local reason = playerTextBox.Text
+    
+    if not selectedPlayer then
+        playerStatusLabel.TextColor3 = COLORS.SECONDARY
+        playerStatusLabel.Text = "⚠ Select player!"
+        
+        local originalColor = playerDropdownStroke.Color
+        for i = 1, 3 do
+            playerDropdownStroke.Color = COLORS.SECONDARY
+            wait(0.1)
+            playerDropdownStroke.Color = originalColor
+            wait(0.1)
+        end
+        return
+    end
+    
+    if reason == "" or string.len(reason) < 5 then
+        playerStatusLabel.TextColor3 = COLORS.SECONDARY
+        playerStatusLabel.Text = "⚠ Min 5 chars!"
+        
+        local originalPos = playerTextBoxCard.Position
+        for i = 1, 3 do
+            playerTextBoxCard.Position = originalPos + UDim2.new(0, 4, 0, 0)
+            wait(0.04)
+            playerTextBoxCard.Position = originalPos + UDim2.new(0, -4, 0, 0)
+            wait(0.04)
+        end
+        playerTextBoxCard.Position = originalPos
+        return
+    end
+    
+    playerSubmitButton.Active = false
+    playerSubmitText.Text = "⏳ SENDING"
+    playerSubmitButton.BackgroundColor3 = COLORS.TEXT_MUTED
+    
+    sendPlayerReport:FireServer(selectedPlayer.UserId, selectedPlayer.Name, reason)
+    
+    wait(0.5)
+    playerStatusLabel.TextColor3 = COLORS.SUCCESS
+    playerStatusLabel.Text = "✓ Report sent!"
+    playerSubmitText.Text = "✓ SENT"
+    playerSubmitButton.BackgroundColor3 = COLORS.SUCCESS
+    
+    wait(1.5)
+    hidePanel()
+    playerSubmitButton.Active = true
+    playerSubmitText.Text = "📤 REPORT PLAYER"
 end)
 
 openButton.MouseEnter:Connect(function()
@@ -422,19 +861,31 @@ closeButton.MouseLeave:Connect(function()
     closeIcon.TextColor3 = COLORS.TEXT_SECONDARY
 end)
 
-submitButton.MouseEnter:Connect(function()
-    if submitButton.Active then
-        submitButton.BackgroundColor3 = COLORS.PRIMARY_HOVER
+bugSubmitButton.MouseEnter:Connect(function()
+    if bugSubmitButton.Active then
+        bugSubmitButton.BackgroundColor3 = COLORS.PRIMARY_HOVER
     end
 end)
 
-submitButton.MouseLeave:Connect(function()
-    if submitButton.Active then
-        submitButton.BackgroundColor3 = COLORS.PRIMARY
+bugSubmitButton.MouseLeave:Connect(function()
+    if bugSubmitButton.Active then
+        bugSubmitButton.BackgroundColor3 = COLORS.PRIMARY
     end
 end)
 
-print("✓ Ultra Compact Bug Report - Center Top (Updated Positions)")
+playerSubmitButton.MouseEnter:Connect(function()
+    if playerSubmitButton.Active then
+        playerSubmitButton.BackgroundColor3 = COLORS.PRIMARY_HOVER
+    end
+end)
+
+playerSubmitButton.MouseLeave:Connect(function()
+    if playerSubmitButton.Active then
+        playerSubmitButton.BackgroundColor3 = COLORS.PRIMARY
+    end
+end)
+
+print("✓ Ultra Compact Report System v2.1")
 print("Platform:", isMobile and "Mobile" or "PC")
-print("Button Position:", isMobile and "Mobile: (0.5, -5, 0, 12)" or "PC: (0.5, -170, 0, 12)")
-print("Author: ItoRenz")
+print("Features: Bug Report (Min: 10 chars) + Player Report (Min: 5 chars)")
+print("Author: ItoRenz00")
